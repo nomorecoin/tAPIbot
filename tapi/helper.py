@@ -174,7 +174,7 @@ class Printing(object):
     def displayTicker(self):
         '''Display ticker for any configured pairs'''
         for pair in self.config.pairs:
-            if self.config.pairs[pair] == 'True':
+            if self.config.pairs[pair]:
                 self.printTicker(pair, self.trader.tickerData)
 
     def printTicker(self, pair, tickerData):
