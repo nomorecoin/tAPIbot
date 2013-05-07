@@ -83,6 +83,11 @@ class Config(object):
         self.pairs['nmc_btc'] = self.parser.getboolean('Pairs','nmc_btc')
         self.pairs['usd_rur'] = self.parser.getboolean('Pairs','usd_rur')
         self.pairs['eur_usd'] = self.parser.getboolean('Pairs','eur_usd')
+        self.pairs['nvc_btc'] = self.parser.getboolean('Pairs','nvc_btc')
+        self.pairs['trc_btc'] = self.parser.getboolean('Pairs','trc_btc')
+        self.pairs['ppc_btc'] = self.parser.getboolean('Pairs','ppc_btc')
+        self.pairs['ftc_btc'] = self.parser.getboolean('Pairs','ftc_btc')
+        self.pairs['cnc_btc'] = self.parser.getboolean('Pairs','cnc_btc')
 
     def updateSignals(self):
         '''Update only signals section'''
@@ -118,7 +123,7 @@ class Config(object):
     def updatePairs(self):
         self.parser.read(self.file)
         
-        
+    
 class Printing(object):
 
     def __init__(self,log,config,trader):
