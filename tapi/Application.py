@@ -9,7 +9,7 @@ print'Greetings, human. tAPI-bot loading...'
 trader = trader.trade()
 config = trader.config
 log = trader.log
-log.info('Restart')
+log.info('tAPI-bot Starting')
 # printing needs instantiated classes for instance vars access
 printing = helper.Printing(log,config,trader)
 

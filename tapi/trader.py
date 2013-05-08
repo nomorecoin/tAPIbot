@@ -13,6 +13,7 @@ class trade(object):
         self.log = helper.Log()
         self.config = helper.Config()
         self.tick = api.publicapi()
+        self.keyCheck()
         self.tapi = api.tradeapi(self.config.apikey,self.config.apisecret)
         self.signals = signals(self.config)
         self.tradeData = self.tapi.update()
@@ -22,6 +23,38 @@ class trade(object):
         self.lastID = self.tick.getLastID(self.config.pair)
         self.shortPosition = None
         self.longOn = self.config.longOn
+
+    def keyCheck(self):
+        '''Verify a key and secret are found, and have API access'''
+        # check valid key length
+        if len(self.config.apikey) <= 43 or len(self.config.apisecret) <= 63:
+            self.log.warning('API credentials too short. Exiting.')
+            import sys
+            sys.exit('Verify you have input API key and secret.')
+        # attempt to connect with credentials
+        test = api.tradeapi(self.config.apikey,self.config.apisecret)
+        # store the output
+        self.rights = test.poll().get('return').get('rights')
+        if type(self.rights) == None:
+            self.log.warning('keycheck rights are Nonetype')
+            self.log.warning(self.rights)
+            import sys
+            sys.exit('Verify you have input API key and secret.')
+            
+        info = self.rights.get('info')
+        trade = self.rights.get('trade')
+        if info:
+            self.log.info('API info rights enabled')
+        if trade:
+            self.log.info('API trade rights enabled')
+        if not info:
+            self.log.warning('API info rights not enabled, cannot continue.')
+            import sys
+            sys.exit('API info rights not enabled. Exiting.')
+        if not trade:
+            self.log.info('API trade rights not enabled. Trading disabled.')
+            ## TODO: activate sim mode if trade rights not enabled
+            
 
     def update(self):
         '''wrapper, execute a step of trader instance'''
@@ -71,7 +104,7 @@ class trade(object):
         price = self.tick.getLast(self.config.pair)
         if self.shortPosition == None:
             self.determinePosition()
-        # move signal checking to signals class
+        ## TODO: move signal checking to signals class
         if signalType == 'single':
             if self.signals.single.value < price:
                 print'Market trending up'
@@ -457,7 +490,10 @@ class Plot(object):
         pylab.close(self.graph)
 
     def getYlims(self):
-        '''Create plot limits from min,max in plot lists, with 0.2% buffer top and bottom'''
+        '''
+        Create plot limits from min,max in plot lists,
+        with 0.1% buffer added to top and bottom of graph
+        '''
         maxList = []
         minList = []
         for line in self.toPlot:
