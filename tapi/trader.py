@@ -109,8 +109,9 @@ class trade(object):
             if self.signals.single.value < price:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                if self.shortPosition:
-                    self.placeBid()
+                #investigate
+                #if self.shortPosition:
+                self.placeBid()
             elif self.signals.single.value > price:
                 print'Market trending down'
                 self.log.info('Market trending down')
@@ -121,8 +122,9 @@ class trade(object):
             if self.signals.fastMA.value > self.signals.slowMA.value:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                if self.shortPosition:
-                    self.placeBid()
+                #investigate
+                #if self.shortPosition:
+                self.placeBid()
             elif self.signals.fastMA.value < self.signals.slowMA.value:
                 print'Market trending down'
                 self.log.info('Market trending down')
@@ -136,8 +138,9 @@ class trade(object):
             if rib1 < price  and rib2 < price and rib3 < price:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                if self.shortPosition:
-                    self.placeBid()
+                #investigate
+                #if self.shortPosition:
+                self.placeBid()
             elif rib1 > price and rib2 > price and rib3 > price:
                 print'Market trending down'
                 self.log.info('Market trending down')
