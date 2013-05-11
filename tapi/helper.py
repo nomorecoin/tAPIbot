@@ -140,6 +140,10 @@ class Printing(object):
     def displayBalance(self):
         '''Print significant balances, open orders'''
         orders = self.trader.tradeData.get('openOrders', 'Failed to read orderCount')
+        ##uncomment 3 lines below for orderType debug printing
+        #ordertype = type(orders)
+        #print'DEBUG: helper.displayBalance orders TYPE is',ordertype
+        #print'DEBUG: helper.displayBalance orders:',orders
         if type(orders) == int and orders > 0: 
             print"Open Orders:",orders
             self.processOrders(printOutput=True)
@@ -154,7 +158,7 @@ class Printing(object):
     def processOrders(self, printOutput = False):
         '''Duild dict of open orders, by native ID. Update global orderData'''
         orderData = self.trader.tradeData.get('orders',None)
-        if orderData == None:
+        if orderData.get('success') == 0: #order data contains failed api call
             orderData = self.trader.tapi.getOrders()
         if printOutput:
             try:
@@ -166,8 +170,15 @@ class Printing(object):
                                                     order['amount'],
                                                     order['rate']))
             except TypeError as e:
+                #TODO add debug flag for printing output to console on errors
+                print'TypeError in processOrders:'
                 print e
-                logging.info('Type error in helper.processOrders: %s' % e)
+                logging.error('Type error in helper.processOrders: %s' % e)
+                logging.info('orderData: %s' % orderData)
+            except KeyError as e:
+                print'KeyError in processOrders'
+                print e
+                logging.error('Key error in helper.processOrders: %s' % e)
                 logging.info('orderData: %s' % orderData)
         return orderData
 
