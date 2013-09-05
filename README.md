@@ -1,14 +1,13 @@
-tAPIbot
-=======
-
-BTC-E Automated Trade Platform in Python
+tAPIbot - BTC-E Automated Trade Platform in Python
 =======
 Python 2.7
-Pylab required for graph output
+Canvas/EPD free recommended.
+Pylab or compatibale equivalent required for graph output.
 
 To Run
 ========
-Enter your API info in settings.ini
-Reconfigure to taste
-Run Application.py to start
+Enter your API info in settings.ini.
+Reconfigure to taste.
+Run Application.py.
+
 
