@@ -213,9 +213,10 @@ class trade(object):
             bids = self.tick.depth(pair).get('bids')
             highBid = bids[0]
             rate = (highBid[0] + pip)
-        # NOTE: Trying without old rounding hacks
+        ## TODO:  below, without rounding hack
         #amount = round((balance/rate),3)
-        # hack, issues with using entire balance
+        amount = balance/rate
+        # trying without this hack
         #amount = amount - 0.00001
         if self.config.simMode:
             self.log.info('Simulated buy: %s %s' % (pair,rate))
@@ -235,10 +236,10 @@ class trade(object):
         pip = self.getPip()
         cur = pair[:3]
         balance = self.tradeData.get('funds').get(cur)
-        ## NOTE: add configurable balance multiplier range
-        #balance = balance*0.5
-        # NOTE: hackish
+        ## TODO: add configurable balance multiplier range
+        # trying without rounding, need to investigate max precision allowed
         #amount = round(balance,3)
+        amount = balance
         if self.config.orderType == 'market':
             rate = self.calcDepthRequired(amount,'sell')
         elif self.config.orderType == 'fokLast':
