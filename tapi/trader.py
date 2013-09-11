@@ -6,6 +6,9 @@ import pylab
 ##TODO:
 ##    develop oscillator (aroon?) and implement plotting
 ##    look at implementing n number ribbon lines
+##    implement and test min_volatility check
+##    remove longOn/shortPosition if possible
+##    refactor/conform to PEP8 instead of MIT trickery
 
 class trade(object):
     '''Handle trading, reporting, and signals'''
@@ -23,6 +26,46 @@ class trade(object):
         self.lastID = self.tick.getLastID(self.config.pair)
         self.shortPosition = None
         self.longOn = self.config.longOn
+        self.current_volatility = self.check_volatility()
+
+    def check_volatility_day(self):
+        '''
+        Returns difference in API high/low, as percent. Value is float.
+        '''
+        # must update tickerData before calculating
+        self.tickerData = self.tick.update(self.config.pairs)
+        # get high/low
+        try:
+            low = self.tickerData.get(self.config.pair).get('low')
+            high = self.tickerData.get(self.config.pair).get('high')
+        except TypeError, e:
+            print('Check pair in settings.ini!')
+            print e
+        # calculate percent absolute difference
+        delta = float(high - low)/low
+        self.current_volatility = delta*100.0
+        p = self.config.pair
+        v = self.current_volatility
+        self.log.info('%s 24-hour volatility is currently %.2f percent' %(p, v))
+        return abs(self.current_volatility)
+
+    def check_volatility(self):
+        '''
+        Checks absolute difference in min/max price over last 150 trades.
+        Returns value as percent. Value is a float.
+        '''
+        prices = []
+        for trade in self.tick.trades(self.config.pair):
+            prices.append(trade.get('price'))
+        min_price = min(prices)
+        max_price = max(prices)
+        # calculate percent absolute difference
+        delta = float(max_price - min_price)/min_price
+        self.current_volatility = delta*100.0
+        p = self.config.pair
+        v = self.current_volatility
+        self.log.info('%s volatility is currently %.2f percent' %(p, v))
+        return abs(self.current_volatility)
 
     def keyCheck(self):
         '''Verify a key and secret are found, and have API access'''
@@ -60,6 +103,7 @@ class trade(object):
         '''wrapper, execute a step of trader instance'''
         self.tickerData = self.tick.update(self.config.pairs)
         self.tradeData = self.tapi.update()
+        self.check_volatility()
         self.determinePosition()
         self.signals.update()
         self.last = self.tick.getLast(self.config.pair)
@@ -73,6 +117,7 @@ class trade(object):
         
     def determinePosition(self):
         '''determine which pair user is long on, then position from balance'''
+        # TODO: do this better.
         if self.config.simMode:
             return self.shortPosition
         pair = self.config.pair
@@ -168,9 +213,10 @@ class trade(object):
             bids = self.tick.depth(pair).get('bids')
             highBid = bids[0]
             rate = (highBid[0] + pip)
-        amount = round((balance/rate),3)
+        # NOTE: Trying without old rounding hacks
+        #amount = round((balance/rate),3)
         # hack, issues with using entire balance
-        amount = amount - 0.00001
+        #amount = amount - 0.00001
         if self.config.simMode:
             self.log.info('Simulated buy: %s %s' % (pair,rate))
             print('Simulated buy: %s %s' % (pair,rate))
@@ -190,8 +236,9 @@ class trade(object):
         cur = pair[:3]
         balance = self.tradeData.get('funds').get(cur)
         ## NOTE: add configurable balance multiplier range
-        balance = balance*0.5
-        amount = round(balance,3)
+        #balance = balance*0.5
+        # NOTE: hackish
+        #amount = round(balance,3)
         if self.config.orderType == 'market':
             rate = self.calcDepthRequired(amount,'sell')
         elif self.config.orderType == 'fokLast':

@@ -1,12 +1,19 @@
-import hmac,time,urllib2,urllib,hashlib,json
+import hashlib
+import hmac
+import json
+import time
+import urllib
+import urllib2
 
 ###TODO:
-# add instance of helper.Log to each class
-# create a new logfile for errors?
+# add instance of helper.Log?
+# PEP8-ify
+# Better exception handling
 
 #------------
 # Private API
 #------------
+
 class tradeapi:
     '''Trading and account-specific info from btc-e API'''
     def __init__(self,key,secret):
@@ -16,10 +23,11 @@ class tradeapi:
         self.tradeData = {}
         
     def update(self):
-        '''wrapper for poll method, return response reassigned to dict'''
+        '''Wrapper for poll method, return response reassigned to dict'''
         raw = self.poll()
-        if raw['success'] == 0:
-            self.update()
+        if raw['success'] == 0: # API response has failed
+            print('API response returned status "fail", trying call again.')
+            self.update() # try again
         output = raw.get('return')
         self.tradeData['funds'] = output['funds']
         self.tradeData['openOrders'] = output['open_orders']
@@ -65,7 +73,7 @@ class tradeapi:
         return self.postdata(self.url,send)
         
     def postdata(self,url,datadict):
-        '''appends POST to request, sends, parses JSON response'''
+        '''Appends POST to request, sends, parses JSON response'''
         data = urllib.urlencode(datadict)
         headers = {
         'User-Agent':'nomorePy',
@@ -79,18 +87,19 @@ class tradeapi:
             try:
                 response = json.loads(urllib2.urlopen(request).read())
                 if response['success'] == 0:
-                    #print('API parse failed, responded with error:')
-                    #print(response)
+                    # API call returned failed status
                     pass
                 return response
             except (urllib2.URLError, urllib2.HTTPError) as e:
                 print 'Connection Error, sleeping...'
-                time.sleep(3)
+                for second in range(5):
+                    time.sleep(1)
                 continue
             except Exception as e:
                 print e
                 print 'Sleeping, then retrying'
-                time.sleep(3)
+                for second in range(5):
+                    time.sleep(1)
                 continue
         
     def sign(self,param):
@@ -111,14 +120,15 @@ class publicapi(object):
         self.tickerDict = {}
         
     def update(self,pairs):
-        '''Updates pairs, per pair, assumes pairs is dict of booleans per-pair'''
+        '''Updates pairs set to True,
+        where pairs is dict of booleans currencies.'''
         for pair in pairs:
             if pairs[pair]:
                 self.updatePair(pair)
         return self.tickerDict 
 
     def poll(self,url):
-        '''Generic public API parsing method, returns dict'''
+        '''Generic public API parsing method, returns parsed dict'''
         while True:
             try:
                 request = urllib2.Request(url)
@@ -126,25 +136,28 @@ class publicapi(object):
                 return response
             except urllib2.URLError as e:
                 print "Caught URL Error, sleeping..."
-                time.sleep(3) 
-                print "Retrying connection"
+                for second in range(5):
+                    time.sleep(1) 
+                print "Retrying connection now."
                 continue
             except urllib2.HTTPError as e:
                 print "Caught HTTP Error, sleeping..."
-                time.sleep(3)
-                print "Retrying connection now"
+                for second in range(5):
+                    time.sleep(1) 
+                print "Retrying connection now."
                 continue
             except Exception as e:
                 print 'publicapi.poll caught other Exception:'
                 print e
                 print 'Sleeping...'
-                time.sleep(3)
-                print "Retrying"
+                for second in range(5):
+                    time.sleep(1) 
+                print "Retrying now."
                 continue
 
     def ticker(self,pair):
         '''Returns ticker dict for a single pair'''
-        url = self.url + pair + '/ticker' #construct url
+        url = self.url + pair + '/ticker'
         raw = self.poll(url)
         ticker = raw['ticker']
         return ticker
@@ -207,6 +220,7 @@ class MA(publicapi):
         self.update()
 
     def getTrades(self):
+        '''Returns full list of trades from API'''
         # replace, use publicapi instance to accomplish this
         url = 'https://btc-e.com/api/2/' + self.pair + '/trades'
         while True:
@@ -215,21 +229,27 @@ class MA(publicapi):
                 (true,false,null) = (True,False,None)
                 result = eval(json)
                 return result
-            except Exception:
-                print "Error parsing trades..."
-                time.sleep(3)
-                print "Retrying now"     
+            except Exception, e:
+                # TODO: Handle this better!
+                print("Error parsing trades.")
+                print("Exception details: %s." %e)
+                for second in range(5):
+                    time.sleep(1) 
+                print "Retrying now."     
                 continue
 
     def addPoint(self,point):
+        '''Appends a single point to a MA signal data list'''
         self.dataList.append(point)
         self.activate()
         return self.value
 
-    def update(self): 
+    def update(self):
+        '''Perform the steps to update one tick/bar for an MA signal'''
         if self.type == 'SMA':
             rawPrices = self.getTrades()
-            self.priceList = [] # reset list, this caps points to 150
+            # TODO: Investigate storing >150 data points
+            self.priceList = [] # reset list, this caps data points to 150
             for trade in rawPrices:
                 price = trade.get('price')
                 self.priceList.append(price)
@@ -255,8 +275,8 @@ class MA(publicapi):
         
     def activate(self):
         '''
-        Flag a MA active only when there is enough data
-        used for reqPoints > initial available points
+        Flag a MA signal active only when there are enough data points.
+        Configured by user.
         '''
         if len(self.dataList) >= self.reqPoints:
             self.active = True
@@ -264,7 +284,7 @@ class MA(publicapi):
             return self.active
 
     def calc(self):
-        '''Calculate MA value at this bar'''
+        '''Calculate MA value for current bar/tick'''
         if self.active:
             if self.type == 'VMA' or self.type == 'VWMA':
                 self.value = sum(self.dataList)/sum(self.volumeData)
@@ -274,7 +294,7 @@ class MA(publicapi):
                 
         
     def changeReqPoints(self,reqPoints):
-        '''Change the MA period'''
+        '''Change the MA signal window, ie: number of trailing data points.'''
         self.reqPoints = reqPoints
         self.update()
         return self.reqPoints

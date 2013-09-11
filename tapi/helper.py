@@ -54,6 +54,8 @@ class Config(object):
         # Trading
         self.simMode = self.parser.getboolean('Trading','simMode')
         self.pair = self.parser.get('Trading','pair')
+        self.min_volatility = self.parser.getfloat('Trading','min_volatility')
+        self.volatility_sleep = self.parser.getint('Trading','volatility_sleep')
         self.longOn = self.parser.get('Trading','longOn')
         self.orderType = self.parser.get('Trading','orderType')
         self.fokTimeout = self.parser.getint('Trading','fokTimeout')
@@ -68,11 +70,12 @@ class Config(object):
             self.slow = self.parser.getint('Signals','slow')
         elif self.signalType == 'ribbon':
             self.ribbonStart = self.parser.getint('Signals','ribbonStart')
-            # removed for now
+            # Not implemented
             #self.numRibbon = self.parser.getint('Signals','numRibbon')
             self.ribbonSpacing = self.parser.getint('Signals','ribbonSpacing')
         self.priceBand = self.parser.getboolean('Signals','priceBand')
         # Pairs
+        # Updated for version 0.52
         self.pairs = {}
         self.pairs['btc_usd'] = self.parser.getboolean('Pairs','btc_usd')
         self.pairs['btc_rur'] = self.parser.getboolean('Pairs','btc_rur')
@@ -80,14 +83,16 @@ class Config(object):
         self.pairs['ltc_btc'] = self.parser.getboolean('Pairs','ltc_btc')
         self.pairs['ltc_usd'] = self.parser.getboolean('Pairs','ltc_usd')
         self.pairs['ltc_rur'] = self.parser.getboolean('Pairs','ltc_rur')
+        self.pairs['ltc_eur'] = self.parser.getboolean('Pairs','ltc_eur')
         self.pairs['nmc_btc'] = self.parser.getboolean('Pairs','nmc_btc')
+        self.pairs['nmc_usd'] = self.parser.getboolean('Pairs','nmc_usd')
+        self.pairs['nvc_btc'] = self.parser.getboolean('Pairs','nvc_btc')
+        self.pairs['nvc_usd'] = self.parser.getboolean('Pairs','nvc_usd')
         self.pairs['usd_rur'] = self.parser.getboolean('Pairs','usd_rur')
         self.pairs['eur_usd'] = self.parser.getboolean('Pairs','eur_usd')
-        self.pairs['nvc_btc'] = self.parser.getboolean('Pairs','nvc_btc')
         self.pairs['trc_btc'] = self.parser.getboolean('Pairs','trc_btc')
         self.pairs['ppc_btc'] = self.parser.getboolean('Pairs','ppc_btc')
         self.pairs['ftc_btc'] = self.parser.getboolean('Pairs','ftc_btc')
-        self.pairs['cnc_btc'] = self.parser.getboolean('Pairs','cnc_btc')
 
     def updateSignals(self):
         '''Update only signals section'''
@@ -127,7 +132,7 @@ class Config(object):
 class Printing(object):
 
     def __init__(self,log,config,trader):
-        # Access instantiated classes
+        # Access to instantiated classes
         self.log = log
         self.config = config
         self.trader = trader
@@ -140,10 +145,10 @@ class Printing(object):
     def displayBalance(self):
         '''Print significant balances, open orders'''
         orders = self.trader.tradeData.get('openOrders', 'Failed to read orderCount')
-        ##uncomment 3 lines below for orderType debug printing
-        #ordertype = type(orders)
-        #print'DEBUG: helper.displayBalance orders TYPE is',ordertype
-        #print'DEBUG: helper.displayBalance orders:',orders
+##        uncomment 3 lines below for orderType debug printing
+##        ordertype = type(orders)
+##        print'DEBUG: helper.displayBalance orders TYPE is',ordertype
+##        print'DEBUG: helper.displayBalance orders:',orders
         if type(orders) == int and orders > 0: 
             print"Open Orders:",orders
             self.processOrders(printOutput=True)
@@ -170,7 +175,7 @@ class Printing(object):
                                                     order['amount'],
                                                     order['rate']))
             except TypeError as e:
-                #TODO add debug flag for printing output to console on errors
+                # TODO add debug flag for printing output to console on errors
                 print'TypeError in processOrders:'
                 print e
                 logging.error('Type error in helper.processOrders: %s' % e)
@@ -190,7 +195,7 @@ class Printing(object):
 
     def printTicker(self, pair, tickerData):
         '''Modular print, prints all ticker values of one pair'''
-        # needs access to tickerData dict!
+        # needs access to tickerData dict
         data = self.trader.tickerData[pair]
         first = pair[:3].upper()
         second = pair[4:].upper()
