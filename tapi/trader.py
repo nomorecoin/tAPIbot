@@ -213,9 +213,9 @@ class trade(object):
             bids = self.tick.depth(pair).get('bids')
             highBid = bids[0]
             rate = (highBid[0] + pip)
-        ## TODO:  below, without rounding hack
-        #amount = round((balance/rate),3)
         amount = balance/rate
+        # round, API rejects beyond 8 places
+        amount = round((balance/rate),8)
         # trying without this hack
         #amount = amount - 0.00001
         if self.config.simMode:
@@ -237,9 +237,8 @@ class trade(object):
         cur = pair[:3]
         balance = self.tradeData.get('funds').get(cur)
         ## TODO: add configurable balance multiplier range
-        # trying without rounding, need to investigate max precision allowed
-        #amount = round(balance,3)
-        amount = balance
+        # round, API rejects beyond 8 places
+        amount = round(balance,8)
         if self.config.orderType == 'market':
             rate = self.calcDepthRequired(amount,'sell')
         elif self.config.orderType == 'fokLast':
