@@ -3,21 +3,24 @@ import api
 import time
 import pylab
 
-##TODO:
-##    develop oscillator (aroon?) and implement plotting
-##    look at implementing n number ribbon lines
-##    implement and test min_volatility check
-##    remove longOn/shortPosition if possible
-##    refactor/conform to PEP8 instead of MIT trickery
+# TODO:
+# develop oscillator (aroon?) and implement plotting
+# look at implementing n number ribbon lines
+# implement and test min_volatility check
+# remove longOn/shortPosition if possible
+# refactor/conform to PEP8 instead of MIT trickery (almost done?)
+
 
 class trade(object):
+
     '''Handle trading, reporting, and signals'''
+
     def __init__(self):
         self.log = helper.Log()
         self.config = helper.Config()
         self.tick = api.publicapi()
         self.keyCheck()
-        self.tapi = api.tradeapi(self.config.apikey,self.config.apisecret)
+        self.tapi = api.tradeapi(self.config.apikey, self.config.apisecret)
         self.signals = signals(self.config)
         self.tradeData = self.tapi.update()
         self.tickerData = self.tick.update(self.config.pairs)
@@ -38,15 +41,17 @@ class trade(object):
         try:
             low = self.tickerData.get(self.config.pair).get('low')
             high = self.tickerData.get(self.config.pair).get('high')
-        except TypeError, e:
+        except TypeError as e:
             print('Check pair in settings.ini!')
             print e
         # calculate percent absolute difference
-        delta = float(high - low)/low
-        self.current_volatility = delta*100.0
+        delta = float(high - low) / low
+        self.current_volatility = delta * 100.0
         p = self.config.pair
         v = self.current_volatility
-        self.log.info('%s 24-hour volatility is currently %.2f percent' %(p, v))
+        self.log.info(
+            '%s 24-hour volatility is currently %.2f percent' %
+            (p, v))
         return abs(self.current_volatility)
 
     def check_volatility(self):
@@ -60,11 +65,11 @@ class trade(object):
         min_price = min(prices)
         max_price = max(prices)
         # calculate percent absolute difference
-        delta = float(max_price - min_price)/min_price
-        self.current_volatility = delta*100.0
+        delta = float(max_price - min_price) / min_price
+        self.current_volatility = delta * 100.0
         p = self.config.pair
         v = self.current_volatility
-        self.log.info('%s volatility is currently %.2f percent' %(p, v))
+        self.log.info('%s volatility is currently %.2f percent' % (p, v))
         return abs(self.current_volatility)
 
     def keyCheck(self):
@@ -75,15 +80,15 @@ class trade(object):
             import sys
             sys.exit('Verify you have input API key and secret.')
         # attempt to connect with credentials
-        test = api.tradeapi(self.config.apikey,self.config.apisecret)
+        test = api.tradeapi(self.config.apikey, self.config.apisecret)
         # store the output
         self.rights = test.poll().get('return').get('rights')
-        if type(self.rights) == None:
+        if isinstance(self.rights, None):
             self.log.warning('keycheck rights are Nonetype')
             self.log.warning(self.rights)
             import sys
             sys.exit('Verify you have input API key and secret.')
-            
+
         info = self.rights.get('info')
         trade = self.rights.get('trade')
         if info:
@@ -96,8 +101,7 @@ class trade(object):
             sys.exit('API info rights not enabled. Exiting.')
         if not trade:
             self.log.info('API trade rights not enabled. Trading disabled.')
-            ## TODO: activate sim mode if trade rights not enabled
-            
+            # TODO: activate sim mode if trade rights not enabled
 
     def update(self):
         '''wrapper, execute a step of trader instance'''
@@ -109,12 +113,12 @@ class trade(object):
         self.last = self.tick.getLast(self.config.pair)
         oldID = self.lastID
         self.lastID = self.tick.getLastID(self.config.pair)
-        if oldID != self.lastID: # new trade has occurred
+        if oldID != self.lastID:  # new trade has occurred
             self.evalOrder()
             self.signals.updatePlot(self.last)
         self.updateStandingOrders()
         self.killUnfilled()
-        
+
     def determinePosition(self):
         '''determine which pair user is long on, then position from balance'''
         # TODO: do this better.
@@ -127,17 +131,17 @@ class trade(object):
         elif self.config.longOn == 'second':
             longCur = pair[4:]
             shortCur = pair[:3]
-        balShort = self.tradeData['funds'].get(shortCur,0)
+        balShort = self.tradeData['funds'].get(shortCur, 0)
         if self.config.longOn == 'first':
-            normShort = balShort/self.last
+            normShort = balShort / self.last
         else:
-            normShort = balShort*self.last
-        balLong = self.tradeData['funds'].get(longCur,0)
+            normShort = balShort * self.last
+        balLong = self.tradeData['funds'].get(longCur, 0)
         if normShort > balLong:
             self.shortPosition = True
         else:
             self.shortPosition = False
-    
+
     def updateLast(self):
         '''update last price and last trade id instance variables'''
         self.last = self.tick.getLast(self.config.pair)
@@ -147,15 +151,15 @@ class trade(object):
         '''Make decision and execute trade based on configured signals'''
         signalType = self.config.signalType
         price = self.tick.getLast(self.config.pair)
-        if self.shortPosition == None:
+        if self.shortPosition is None:
             self.determinePosition()
-        ## TODO: move signal checking to signals class
+        # TODO: move signal checking to signals class
         if signalType == 'single':
             if self.signals.single.value < price:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                #investigate
-                #if self.shortPosition:
+                # investigate
+                # if self.shortPosition:
                 self.placeBid()
             elif self.signals.single.value > price:
                 print'Market trending down'
@@ -167,8 +171,8 @@ class trade(object):
             if self.signals.fastMA.value > self.signals.slowMA.value:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                #investigate
-                #if self.shortPosition:
+                # investigate
+                # if self.shortPosition:
                 self.placeBid()
             elif self.signals.fastMA.value < self.signals.slowMA.value:
                 print'Market trending down'
@@ -180,11 +184,11 @@ class trade(object):
             rib1 = self.signals.rib1.value
             rib2 = self.signals.rib2.value
             rib3 = self.signals.rib3.value
-            if rib1 < price  and rib2 < price and rib3 < price:
+            if rib1 < price and rib2 < price and rib3 < price:
                 print'Market trending up'
                 self.log.info('Market trending up')
-                #investigate
-                #if self.shortPosition:
+                # investigate
+                # if self.shortPosition:
                 self.placeBid()
             elif rib1 > price and rib2 > price and rib3 > price:
                 print'Market trending down'
@@ -199,33 +203,33 @@ class trade(object):
             return 0.00001
         else:
             return 0.001
-        
+
     def placeBid(self):
         pair = self.config.pair
         pip = self.getPip()
         cur = pair[4:]
         balance = self.tradeData.get('funds').get(cur)
         if self.config.orderType == 'market':
-            rate = self.calcDepthRequired(balance,'buy')
+            rate = self.calcDepthRequired(balance, 'buy')
         elif self.config.orderType == 'fokLast':
             rate = self.tick.ticker(pair).get('last')
         elif self.config.orderType == 'fokTop':
             bids = self.tick.depth(pair).get('bids')
             highBid = bids[0]
             rate = (highBid[0] + pip)
-        amount = balance/rate
+        amount = balance / rate
         # round, API rejects beyond 8 places
-        amount = round((balance/rate),8)
+        amount = round((balance / rate), 8)
         # trying without this hack
         #amount = amount - 0.00001
         if self.config.simMode:
-            self.log.info('Simulated buy: %s %s' % (pair,rate))
-            print('Simulated buy: %s %s' % (pair,rate))
+            self.log.info('Simulated buy: %s %s' % (pair, rate))
+            print('Simulated buy: %s %s' % (pair, rate))
             self.shortPosition = False
             self.log.info('shortPosition %s' % self.shortPosition)
         else:
-            order = self.placeOrder('buy',rate,amount)
-            self.log.info('Attempted buy: %s %s %s' % (pair,rate,amount))
+            order = self.placeOrder('buy', rate, amount)
+            self.log.info('Attempted buy: %s %s %s' % (pair, rate, amount))
             if order:
                 self.log.info('Order successfully placed')
             else:
@@ -236,11 +240,11 @@ class trade(object):
         pip = self.getPip()
         cur = pair[:3]
         balance = self.tradeData.get('funds').get(cur)
-        ## TODO: add configurable balance multiplier range
+        # TODO: add configurable balance multiplier range
         # round, API rejects beyond 8 places
-        amount = round(balance,8)
+        amount = round(balance, 8)
         if self.config.orderType == 'market':
-            rate = self.calcDepthRequired(amount,'sell')
+            rate = self.calcDepthRequired(amount, 'sell')
         elif self.config.orderType == 'fokLast':
             rate = self.tick.ticker(pair).get('last')
         elif self.config.orderType == 'fokTop':
@@ -248,26 +252,26 @@ class trade(object):
             lowAsk = asks[0]
             rate = (lowAsk[0] - pip)
         if self.config.simMode:
-            self.log.info('Simulated sell: %s %s' % (pair,rate))
-            print('Simulated sell: %s %s' % (pair,rate))
+            self.log.info('Simulated sell: %s %s' % (pair, rate))
+            print('Simulated sell: %s %s' % (pair, rate))
             self.shortPosition = True
             self.log.info('shortPosition %s' % self.shortPosition)
         else:
-            order = self.placeOrder('sell',rate,amount)
-            self.log.info('Attempted sell: %s %s %s' % (pair,rate,amount))
+            order = self.placeOrder('sell', rate, amount)
+            self.log.info('Attempted sell: %s %s %s' % (pair, rate, amount))
             if order:
                 self.log.info('Order successfully placed')
             else:
                 self.log.info('Order failed')
 
-    def placeOrder(self,orderType,rate,amount):
+    def placeOrder(self, orderType, rate, amount):
         pair = self.config.pair
-        if amount < 0.1: #  can't trade < 0.1
+        if amount < 0.1:  # can't trade < 0.1
             self.log.warning('Attempted order below 0.1: %s' % amount)
             return False
         else:
             self.log.info('Placing order')
-            response = self.tapi.trade(pair,orderType,rate,amount)
+            response = self.tapi.trade(pair, orderType, rate, amount)
             if response['success'] == 0:
                 response = response['error']
                 self.log.info('Order returned error:/n %s' % response)
@@ -276,19 +280,19 @@ class trade(object):
             elif response.get('return').get('remains') == 0:
                 print('Trade Executed!')
                 #response = response['return']
-                #print response
-                self.log.info('Details: %s' %(response))
+                # print response
+                self.log.info('Details: %s' % (response))
                 return True
             else:
                 response = response['return']
-                self.trackOrder(response,self.config.pair,orderType,rate)
+                self.trackOrder(response, self.config.pair, orderType, rate)
                 print('Order Placed, awaiting fill')
-                #print response
+                # print response
                 #self.log.info('Order placed, awaiting fill')
                 self.log.info('Details: %s' % (response))
                 return True
 
-    def calcDepthRequired(self,amount,orderType):
+    def calcDepthRequired(self, amount, orderType):
         '''
         Determine price for an order of amount to fill immediately
         assumes depth is list of lists as [price,amount]
@@ -307,7 +311,7 @@ class trade(object):
                 rate = order[0]
                 return rate
 
-    def trackOrder(self,response,pair,orderType,rate):
+    def trackOrder(self, response, pair, orderType, rate):
         '''Add unfilled order to tracking dict'''
         order = {}
         order['rate'] = rate
@@ -323,7 +327,7 @@ class trade(object):
     def updateStandingOrders(self):
         '''Update tracked order information'''
         raw = self.tapi.getOrders()
-        updatedOrders = raw.get('return',{})
+        updatedOrders = raw.get('return', {})
         for orderID in self.standingOrders.keys():
             print('Updating tracking for OrderID %s' % (orderID))
             if str(orderID) in updatedOrders.keys():
@@ -336,13 +340,14 @@ class trade(object):
                 order = self.standingOrders.get(orderID)
                 #print('order variable: %s' % (order))
                 # make sure standing orders includes timestamp
-                if order.get('timestamp_created') == None:
+                if order.get('timestamp_created') is None:
                     print('Found no timestamp, updating now')
                     order['timestamp_created'] = updated['timestamp_created']
                 order['amount'] = updated['amount']
                 self.standingOrders[orderID] = order
-            else: #  not found in API response, assume cancelled or filled
-                print('Could not find OrderID in API response, incrementing killcount')
+            else:  # not found in API response, assume cancelled or filled
+                print(
+                    'Could not find OrderID in API response, incrementing killcount')
                 order = self.standingOrders[orderID]
                 killcount = order['killcount']
                 killcount += 1
@@ -350,8 +355,10 @@ class trade(object):
                 #print('Order update: killcount check: %s' %(order))
                 self.standingOrders[orderID] = order
                 if order['killcount'] > 3:
-                    self.log.info('Removing order: %s from tracking.' %(orderID))
-                    self.log.info('OrderID %s: %s' % (orderID,order))
+                    self.log.info(
+                        'Removing order: %s from tracking.' %
+                        (orderID))
+                    self.log.info('OrderID %s: %s' % (orderID, order))
                     del self.standingOrders[orderID]
         return self.standingOrders
 
@@ -362,17 +369,27 @@ class trade(object):
             now = time.time()
             seconds = self.config.fokTimeout
             for order in self.standingOrders:
-                timestamp = self.standingOrders[order].get('timestamp_created',now)
+                timestamp = self.standingOrders[order].get(
+                    'timestamp_created',
+                    now)
                 if now - timestamp > seconds:
-                    self.log.info('Cancelling order: %s' % self.standingOrders[order])
+                    self.log.info(
+                        'Cancelling order: %s' %
+                        self.standingOrders[order])
                     self.tapi.cancelOrder(order)
 
+
 class signals(object):
+
     '''Generate and track signals for trading'''
-    def __init__(self,configInstance):
+
+    def __init__(self, configInstance):
         self.config = configInstance
         self.initSignals()
-        self.plot = Plot(self.signalType,self.config.pair,self.config.graphDPI)
+        self.plot = Plot(
+            self.signalType,
+            self.config.pair,
+            self.config.graphDPI)
         self.log = helper.Log()
 
     def initSignals(self):
@@ -387,14 +404,14 @@ class signals(object):
             start = self.config.ribbonStart
             step = self.config.ribbonSpacing
             self.rib1 = self.createSignal(start)
-            self.rib2 = self.createSignal(start+step)
-            self.rib3 = self.createSignal(start+step+step)
+            self.rib2 = self.createSignal(start + step)
+            self.rib3 = self.createSignal(start + step + step)
 
-    def createSignal(self,reqPoints):
+    def createSignal(self, reqPoints):
         '''Create an instance of one signal'''
         MAtype = self.config.MAtype
         pair = self.config.pair
-        signal = api.MA(pair,MAtype,reqPoints)
+        signal = api.MA(pair, MAtype, reqPoints)
         return signal
 
     def update(self):
@@ -409,35 +426,35 @@ class signals(object):
             self.rib2.update()
             self.rib3.update()
 
-    def updatePlot(self,price):
-        self.plot.append('price',price)
+    def updatePlot(self, price):
+        self.plot.append('price', price)
         if self.signalType == 'single':
             single = self.single.value
-            self.plot.append('single',single)
-            self.printSpread(price,single)
+            self.plot.append('single', single)
+            self.printSpread(price, single)
         if self.signalType == 'dual':
             fast = self.fastMA.value
             slow = self.slowMA.value
-            self.plot.append('fast',fast)
-            self.plot.append('slow',slow)
-            self.printSpread(fast,slow)
+            self.plot.append('fast', fast)
+            self.plot.append('slow', slow)
+            self.printSpread(fast, slow)
         if self.signalType == 'ribbon':
             rib1 = self.rib1.value
             rib2 = self.rib2.value
             rib3 = self.rib3.value
-            self.plot.append('rib1',rib1)
-            self.plot.append('rib2',rib2)
-            self.plot.append('rib3',rib3)
-            self.printSpread(rib1,rib3)
+            self.plot.append('rib1', rib1)
+            self.plot.append('rib2', rib2)
+            self.plot.append('rib3', rib3)
+            self.printSpread(rib1, rib3)
         self.plot.updatePlot()
 
     def printSpread(self, fast, slow):
         '''Print the signal gap, for highest and lowest signals'''
-        delta = float(fast - slow)/slow # % difference
-        spread = delta*100.0
-        print('Signal Spread: %.2f' % (spread))+'%'
-        self.log.info('Signal Spread: %.2f' % (spread)+'%')
-                          
+        delta = float(fast - slow) / slow  # % difference
+        spread = delta * 100.0
+        print('Signal Spread: %.2f' % (spread)) + '%'
+        self.log.info('Signal Spread: %.2f' % (spread) + '%')
+
     def checkSignalConfig(self):
         if self.config.signalType == 'single':
             self.singlePoints()
@@ -473,41 +490,55 @@ class signals(object):
         self.config.updateSignals()
         if start != self.config.ribbonStart or step != self.config.ribbonSpacing:
             self.rib1.changeReqPoints(start)
-            self.rib2.changeReqPoints(start+step)
-            self.rib3.changeReqPoints(start+step+step)
-            log.info('Ribbon start: %s, spacing: %s' %(self.config.ribbonStart,
-                                                       self.config.ribbonSpacing))
-                     
+            self.rib2.changeReqPoints(start + step)
+            self.rib3.changeReqPoints(start + step + step)
+            log.info(
+                'Ribbon start: %s, spacing: %s' % (self.config.ribbonStart,
+                                                   self.config.ribbonSpacing))
+
+
 class Plot(object):
+
     '''Plot and save graph of moving averages and price'''
-    def __init__(self,signalType,pair,graphDPI):
+
+    def __init__(self, signalType, pair, graphDPI):
         # todo: add subplot for oscillator
         self.plotType = signalType
-        self.pair = pair #  for graph title
+        self.pair = pair  # for graph title
         self.DPI = graphDPI
         self.graph = pylab.figure()
-        pylab.rcParams.update({'legend.labelspacing':0.25,
-                               'legend.fontsize':'x-small'})
+        pylab.rcParams.update({'legend.labelspacing': 0.25,
+                               'legend.fontsize': 'x-small'})
         # create dict with linestyles for each configured line
         self.build()
-        
+
     def build(self):
         self.toPlot = {}
-        self.toPlot['price'] = {'label':'Price','color':'k','style':'-'}
+        self.toPlot['price'] = {'label': 'Price', 'color': 'k', 'style': '-'}
         if self.plotType == 'single':
-            self.toPlot['single'] = {'label':'MA','color':'g','style':':'}
+            self.toPlot['single'] = {'label': 'MA', 'color': 'g', 'style': ':'}
         elif self.plotType == 'dual':
-            self.toPlot['fast'] = {'label':'Fast MA','color':'r','style':':'}
-            self.toPlot['slow'] = {'label':'Slow MA','color':'b','style':':'}
+            self.toPlot['fast'] = {'label': 'Fast MA',
+                                   'color': 'r',
+                                   'style': ':'}
+            self.toPlot['slow'] = {'label': 'Slow MA',
+                                   'color': 'b',
+                                   'style': ':'}
         elif self.plotType == 'ribbon':
-            self.toPlot['rib1'] = {'label':'Fast MA','color':'r','style':':'}
-            self.toPlot['rib2'] = {'label':'Mid MA','color':'m','style':':'}
-            self.toPlot['rib3'] = {'label':'Slow MA','color':'b','style':':'}
+            self.toPlot['rib1'] = {'label': 'Fast MA',
+                                   'color': 'r',
+                                   'style': ':'}
+            self.toPlot['rib2'] = {'label': 'Mid MA',
+                                   'color': 'm',
+                                   'style': ':'}
+            self.toPlot['rib3'] = {'label': 'Slow MA',
+                                   'color': 'b',
+                                   'style': ':'}
 
-    def changeDPI(self,DPI):
+    def changeDPI(self, DPI):
         self.DPI = DPI
-        
-    def append(self,line,value):
+
+    def append(self, line, value):
         '''Append new point to specified line['values'] in toPlot dict'''
         self.toPlot[line].setdefault('values', []).append(value)
 
@@ -525,9 +556,9 @@ class Plot(object):
             label = self.toPlot[line].get('label')
             color = self.toPlot[line].get('color')
             style = self.toPlot[line].get('style')
-            #print values,label,color,style
+            # print values,label,color,style
             pylab.plot(values, label=label, color=color, linestyle=style)
-        ylims = self.getYlims() 
+        ylims = self.getYlims()
         pylab.ylim(ylims)
         # labels
         pylab.title("Moving Averages against Price of %s" % self.pair)
@@ -536,7 +567,7 @@ class Plot(object):
         # legend top-left
         pylab.legend(loc=2)
         # save and close
-        pylab.savefig('graph.png',dpi=self.DPI)
+        pylab.savefig('graph.png', dpi=self.DPI)
         pylab.close(self.graph)
 
     def getYlims(self):
@@ -551,10 +582,10 @@ class Plot(object):
             maxList.append(max(values))
             minList.append(min(values))
         ymax = max(maxList)
-        ymax = round(ymax+(ymax*0.001),2) #  0.1% buffer
+        ymax = round(ymax + (ymax * 0.001), 2)  # 0.1% buffer
         ymin = min(minList)
-        ymin = round(ymin-(ymin*0.001),2)
-        ylims = (ymin,ymax)
+        ymin = round(ymin - (ymin * 0.001), 2)
+        ylims = (ymin, ymax)
         return ylims
-    
+
 # Python is awesome
