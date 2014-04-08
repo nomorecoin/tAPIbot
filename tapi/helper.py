@@ -169,19 +169,19 @@ class Printing(object):
 
     def processOrders(self, printOutput=False):
         '''Duild dict of open orders, by native ID. Update global orderData'''
-        orderData = self.trader.tradeData.get('orders', None)
-        # order data contains failed api call
-        if orderData.get('success') == 0:
+        orderData = self.trader.tradeData.get('orders',None)
+        if orderData.get('success') == 0: #order data contains failed api call
+            logging.error('Success=0: orderData: %s' % orderData)
             orderData = self.trader.tapi.getOrders()
         if printOutput:
             try:
-                for key in orderData.keys():
-                    order = orderData[key]
-                    print('ID: %s %s %s %s at %s' % (key,
-                                                     order['pair'],
-                                                     order['type'],
-                                                     order['amount'],
-                                                     order['rate']))
+                for key in orderData.get('return').keys():
+                    order = orderData.get('return')[key]
+                    print('ID: %s %s %s %s at %s' %(key,
+                                                    order['pair'],
+                                                    order['type'],
+                                                    order['amount'],
+                                                    order['rate']))
             except TypeError as e:
                 # TODO add debug flag for printing output to console on errors
                 print'TypeError in processOrders:'
