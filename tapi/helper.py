@@ -164,11 +164,12 @@ class Printing(object):
         '''Duild dict of open orders, by native ID. Update global orderData'''
         orderData = self.trader.tradeData.get('orders',None)
         if orderData.get('success') == 0: #order data contains failed api call
+            logging.error('Success=0: orderData: %s' % orderData)
             orderData = self.trader.tapi.getOrders()
         if printOutput:
             try:
-                for key in orderData.keys():
-                    order = orderData[key]
+                for key in orderData.get('return').keys():
+                    order = orderData.get('return')[key]
                     print('ID: %s %s %s %s at %s' %(key,
                                                     order['pair'],
                                                     order['type'],

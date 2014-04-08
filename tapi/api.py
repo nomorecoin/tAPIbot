@@ -4,6 +4,7 @@ import json
 import time
 import urllib
 import urllib2
+import numpy
 
 ###TODO:
 # add instance of helper.Log?
@@ -37,12 +38,15 @@ class tradeapi:
         if self.tradeData['openOrders'] > 0:
             self.tradeData['orders'] = self.getOrders()
         return self.tradeData
-		
+	
+    def nonce(self):
+        return int(str(int(time.time() * 10))[1:])
+	
     def poll(self):
         '''Request private API info from BTC-e'''
         send = {'method':
         'getInfo',
-        'nonce':int(time.time())}
+        'nonce':self.nonce()}
         response = self.postdata(self.url,send)
         return response
         
@@ -50,7 +54,7 @@ class tradeapi:
         '''Place trade. Note: all args required'''
         send = {'method':
         'Trade',
-        'nonce':int(time.time()),
+        'nonce':self.nonce(),
         'pair':pair,
         'type':orderType,
         'rate':orderRate,
@@ -61,14 +65,14 @@ class tradeapi:
         '''Returns all open orders, modified from raw return'''
         send = {'method':
         'OrderList',
-        'nonce':int(time.time())}
+        'nonce':self.nonce()}
         return self.postdata(self.url,send)
 
     def cancelOrder(self,orderId):
         '''Cancel an order by specific orderId'''
         send = {'method':
         'CancelOrder',
-        'nonce':int(time.time()),
+        'nonce':self.nonce(),
         'order_id':orderId}
         return self.postdata(self.url,send)
         
@@ -214,6 +218,7 @@ class MA(publicapi):
         self.priceList = []
         self.dataList = []
         self.volumeData = []
+        self.expList = []
         self.active = False
         self.value = None
         self.lastTID = None
@@ -271,8 +276,17 @@ class MA(publicapi):
             return self.value
         elif self.type == 'EMA':
             # implement EMA calculation
-            pass
-        
+            rawTrades = self.getTrades()
+            priceList = []
+            expList = numpy.exp(numpy.linspace(-1., 0., self.reqPoints))
+            expList /= expList.sum()
+            for trade in rawTrades:
+                priceList.insert(0, trade.get('price') )
+            self.expList = expList
+            self.dataList = priceList[-self.reqPoints:]
+            self.activate()
+            return self.value
+
     def activate(self):
         '''
         Flag a MA signal active only when there are enough data points.
@@ -289,7 +303,9 @@ class MA(publicapi):
             if self.type == 'VMA' or self.type == 'VWMA':
                 self.value = sum(self.dataList)/sum(self.volumeData)
             elif self.type == 'SMA':
-                self.value = sum(self.dataList)/self.reqPoints 
+                self.value = sum(self.dataList)/self.reqPoints
+            elif self.type == 'EMA':
+                self.value = numpy.convolve(self.dataList, self.expList,'valid')[:len(self.expList)]
             return self.value
                 
         
