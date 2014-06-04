@@ -17,7 +17,7 @@ import numpy
 
 class tradeapi:
 
-    '''Trading and account-specific info from btc-e API'''
+    """Trading and account-specific info from btc-e API"""
 
     def __init__(self, key, secret):
         self.api = key
@@ -26,7 +26,7 @@ class tradeapi:
         self.tradeData = {}
 
     def update(self):
-        '''Wrapper for poll method, return response reassigned to dict'''
+        """Wrapper for poll method, return response reassigned to dict"""
         raw = self.poll()
         if raw['success'] == 0:  # API response has failed
             print('API response returned status "fail", trying call again.')
@@ -45,7 +45,7 @@ class tradeapi:
         return int(str(int(time.time() * 10))[1:])
 	
     def poll(self):
-        '''Request private API info from BTC-e'''
+        """Request private API info from BTC-e"""
         send = {'method':
         'getInfo',
         'nonce':self.nonce()}
@@ -53,7 +53,7 @@ class tradeapi:
         return response
 
     def trade(self, pair, orderType, orderRate, orderAmount):
-        '''Place trade. Note: all args required'''
+        """Place trade. Note: all args required"""
         send = {'method':
         'Trade',
         'nonce':self.nonce(),
@@ -64,14 +64,14 @@ class tradeapi:
         return self.postdata(self.url,send)
                 
     def getOrders(self,):
-        '''Returns all open orders, modified from raw return'''
+        """Returns all open orders, modified from raw return"""
         send = {'method':
         'OrderList',
         'nonce':self.nonce()}
         return self.postdata(self.url,send)
 
     def cancelOrder(self, orderId):
-        '''Cancel an order by specific orderId'''
+        """Cancel an order by specific orderId"""
         send = {'method':
         'CancelOrder',
         'nonce':self.nonce(),
@@ -79,7 +79,7 @@ class tradeapi:
         return self.postdata(self.url,send)
         
     def postdata(self,url,datadict):
-        '''Appends POST to request, sends, parses JSON response'''
+        """Appends POST to request, sends, parses JSON response"""
         data = urllib.urlencode(datadict)
         headers = {
             'User-Agent': 'nomorePy',
@@ -121,22 +121,22 @@ class tradeapi:
 
 class publicapi(object):
 
-    '''Parse BTC-e Public API'''
+    """Parse BTC-e Public API"""
 
     def __init__(self):
         self.url = 'https://btc-e.com/api/2/'  # append pair, method
         self.tickerDict = {}
 
     def update(self, pairs):
-        '''Updates pairs set to True,
-        where pairs is dict of booleans currencies.'''
+        """Updates pairs set to True,
+        where pairs is dict of booleans currencies."""
         for pair in pairs:
             if pairs[pair]:
                 self.updatePair(pair)
         return self.tickerDict
 
     def poll(self, url):
-        '''Generic public API parsing method, returns parsed dict'''
+        """Generic public API parsing method, returns parsed dict"""
         while True:
             try:
                 request = urllib2.Request(url)
@@ -164,14 +164,14 @@ class publicapi(object):
                 continue
 
     def ticker(self, pair):
-        '''Returns ticker dict for a single pair'''
+        """Returns ticker dict for a single pair"""
         url = self.url + pair + '/ticker'
         raw = self.poll(url)
         ticker = raw['ticker']
         return ticker
 
     def depth(self, pair):
-        '''Returns depth dict for a single pair'''
+        """Returns depth dict for a single pair"""
         url = self.url + pair + '/depth'
         depth = self.poll(url)
         return depth
@@ -182,19 +182,19 @@ class publicapi(object):
         return trades
 
     def getLast(self, pair):
-        '''Returns most recent traded price of pair'''
+        """Returns most recent traded price of pair"""
         trades = self.trades(pair)
         price = trades[0].get('price')
         return price
 
     def getLastID(self, pair):
-        '''Returns ID of last trade for pair'''
+        """Returns ID of last trade for pair"""
         trades = self.trades(pair)
         tradeID = trades[0].get('tid')
         return tradeID
 
     def updatePair(self, pair):
-        '''Update stored ticker info for a single pair, reassigns to variables'''
+        """Update stored ticker info for a single pair, reassigns to variables"""
         tick = self.ticker(pair)
         data = {}
         data['high'] = tick.get('high', 0)
@@ -214,7 +214,7 @@ class publicapi(object):
 
 class MA(publicapi):
 
-    '''Generates a moving average signal, limited to 150 points'''
+    """Generates a moving average signal, limited to 150 points"""
 
     def __init__(self, pair, MAtype, reqPoints):
         self.tick = publicapi()
@@ -231,7 +231,7 @@ class MA(publicapi):
         self.update()
 
     def getTrades(self):
-        '''Returns full list of trades from API'''
+        """Returns full list of trades from API"""
         # replace, use publicapi instance to accomplish this
         url = 'https://btc-e.com/api/2/' + self.pair + '/trades'
         while True:
@@ -250,13 +250,13 @@ class MA(publicapi):
                 continue
 
     def addPoint(self, point):
-        '''Appends a single point to a MA signal data list'''
+        """Appends a single point to a MA signal data list"""
         self.dataList.append(point)
         self.activate()
         return self.value
 
     def update(self):
-        '''Perform the steps to update one tick/bar for an MA signal'''
+        """Perform the steps to update one tick/bar for an MA signal"""
         if self.type == 'SMA':
             rawPrices = self.getTrades()
             # TODO: Investigate storing >150 data points
@@ -294,17 +294,17 @@ class MA(publicapi):
             return self.value
 
     def activate(self):
-        '''
+        """
         Flag a MA signal active only when there are enough data points.
         Configured by user.
-        '''
+        """
         if len(self.dataList) >= self.reqPoints:
             self.active = True
             self.calc()
             return self.active
 
     def calc(self):
-        '''Calculate MA value for current bar/tick'''
+        """Calculate MA value for current bar/tick"""
         if self.active:
             if self.type == 'VMA' or self.type == 'VWMA':
                 self.value = sum(self.dataList) / sum(self.volumeData)
@@ -315,7 +315,7 @@ class MA(publicapi):
             return self.value
 
     def changeReqPoints(self, reqPoints):
-        '''Change the MA signal window, ie: number of trailing data points.'''
+        """Change the MA signal window, ie: number of trailing data points."""
         self.reqPoints = reqPoints
         self.update()
         return self.reqPoints

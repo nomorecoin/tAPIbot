@@ -17,13 +17,13 @@ printing = helper.Printing(log, config, trader)
 
 
 def printConfig():
-    '''Output basic configured info as reminder to user'''
+    """Output basic configured info as reminder to user"""
     # Why not log instead? Are we asking user to confirm settings?
     pass  # until implemented
 
 
 def runLoop(times=1, inf=True):
-    '''Main loop, refresh, display, and trade'''
+    """Main loop, refresh, display, and trade"""
     while times > 0:
         # check volatility before attempting to trade
         # TODO: move to trader

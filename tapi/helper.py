@@ -34,7 +34,7 @@ class Log(object):
 
 class Config(object):
 
-    '''Read a user configuration file, store values in instance variables'''
+    """Read a user configuration file, store values in instance variables"""
 
     def __init__(self, f='settings.ini'):
         self.file = f
@@ -42,7 +42,7 @@ class Config(object):
         self.updateAll()
 
     def updateAll(self):
-        '''Update and store all user settings'''
+        """Update and store all user settings"""
         # TODO: except if file not found, generate defaults
         self.parser.read(self.file)
         # API Info
@@ -100,7 +100,7 @@ class Config(object):
         self.pairs['ftc_btc'] = self.parser.getboolean('Pairs', 'ftc_btc')
 
     def updateSignals(self):
-        '''Update only signals section'''
+        """Update only signals section"""
         self.parser.read(self.file)
         self.signalType = self.parser.get('Signals', 'signalType')
         if self.signalType == 'single':
@@ -114,7 +114,7 @@ class Config(object):
             self.ribbonSpacing = self.parser.get('Signals', 'ribbonSpacing')
 
     def updateTrading(self):
-        '''Update only trading section'''
+        """Update only trading section"""
         self.parser.read(self.file)
         self.simMode = self.parser.getboolean('Trading', 'simMode')
         self.pair = self.parser.get('Trading', 'pair')
@@ -122,7 +122,7 @@ class Config(object):
         self.orderType = self.parser.get('Trading', 'orderType')
 
     def updateSettings(self):
-        '''Update only settings section'''
+        """Update only settings section"""
         self.parser.read(self.file)
         self.showTicker = self.parser.getboolean('Settings', 'showTicker')
         self.verbose = self.parser.getboolean('Settings', 'verbose')
@@ -143,12 +143,12 @@ class Printing(object):
         self.trader = trader
 
     def separator(self, num=1):
-        '''print a 79 char line separator, dashes'''
+        """print a 79 char line separator, dashes"""
         for i in range(num):
             print('-') * 79
 
     def displayBalance(self):
-        '''Print significant balances, open orders'''
+        """Print significant balances, open orders"""
         orders = self.trader.tradeData.get(
             'openOrders',
             'Failed to read orderCount')
@@ -168,7 +168,7 @@ class Printing(object):
         self.separator()
 
     def processOrders(self, printOutput=False):
-        '''Duild dict of open orders, by native ID. Update global orderData'''
+        """Duild dict of open orders, by native ID. Update global orderData"""
         orderData = self.trader.tradeData.get('orders',None)
         if orderData.get('success') == 0: #order data contains failed api call
             logging.error('Success=0: orderData: %s' % orderData)
@@ -196,13 +196,13 @@ class Printing(object):
         return orderData
 
     def displayTicker(self):
-        '''Display ticker for any configured pairs'''
+        """Display ticker for any configured pairs"""
         for pair in self.config.pairs:
             if self.config.pairs[pair]:
                 self.printTicker(pair, self.trader.tickerData)
 
     def printTicker(self, pair, tickerData):
-        '''Modular print, prints all ticker values of one pair'''
+        """Modular print, prints all ticker values of one pair"""
         # needs access to tickerData dict
         data = self.trader.tickerData[pair]
         first = pair[:3].upper()
